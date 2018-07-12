@@ -17,84 +17,64 @@ from mxnet import nd, autograd, gluon
 
 batch_size = 2000
 num_of_samples = 4000
-num_of_train_samples = 3000
-num_of_test_samples = 1000
-CSVIter = mx.io.CSVIter(data_csv='snapshots_X_180709_124937.csv', data_shape=(337,), 
-                        label_csv='snapshots_y_180709_124937.csv',
-                        batch_size=batch_size)
-batch = CSVIter.next()
 
 
 # In[3]:
 
 
-# X = []
-# y = []
-# with open('snapshots_Xy_180709_124937.csv', 'rb') as f:
-#     rdr = csv.reader(f, delimiter=',')
-#     next(rdr)
-#     # dat = [r for r in rdr]
-#     for row in rdr:
-#         X.append([float(x) for x in row[2:-1]])
-#         y.append(int(row[1]))
+X = []
+y = []
+with open('snapshots_Xy_180709_124937.csv', 'rb') as f:
+    rdr = csv.reader(f, delimiter=',')
+    next(rdr)
+    # dat = [r for r in rdr]
+    for row in rdr:
+        X.append([float(x) for x in row[1:-1]])
+        y.append(int(row[1]))
 
-# X = np.asarray(X)
-# y = np.asarray(y)
+X = nd.array(X)
+y = nd.array(y)
 
-# Xtrain = X[0:3000,:]
-# Xtest = X[3000:,:]
-# ytrain = y[0:3000]
-# ytest = y[3000:]
+Xtrain = X[0:3000,:]
+Xtest = X[3000:,:]
+ytrain = y[0:3000]
+ytest = y[3000:]
+
+train_data = gluon.data.DataLoader(gluon.data.ArrayDataset(Xtrain, ytrain),
+                                   batch_size=batch_size, shuffle=True)
+test_data = gluon.data.DataLoader(gluon.data.ArrayDataset(Xtest, ytest),
+                                  batch_size=batch_size, shuffle=True)
 
 
 # In[4]:
 
 
-train_data = gluon.data.DataLoader(gluon.data.ArrayDataset(batch.data, batch.label),
-                                   batch_size=batch_size, shuffle=True)
-test_data = gluon.data.DataLoader(gluon.data.ArrayDataset(batch.data, batch.label),
-                                  batch_size=batch_size, shuffle=True)
+mdl_ctx = mx.cpu()
+dat_ctx = mx.cpu()
 
 
 # In[5]:
 
 
-mdl_ctx = mx.cpu()
-dat_ctx = mx.cpu()
-# mdl_ctx = mx.gpu()
-# dat_ctx = mx.gpu()
+num_hidden = 80
+net = gluon.nn.Sequential()
+with net.name_scope():
+    net.add(gluon.nn.Dense(256, activation="relu"))
+    net.add(gluon.nn.Dense(128, activation="relu"))
+    net.add(gluon.nn.Dense(64, activation="relu"))
+    net.add(gluon.nn.Dense(32))
+
+net.collect_params().initialize(mx.init.Normal(sigma=.1), ctx=mdl_ctx)
+trainer = gluon.Trainer(net.collect_params(), 'Adam', {'learning_rate': .01})
 
 
 # In[6]:
 
 
-num_hidden = 30
-net = gluon.nn.Sequential()
-with net.name_scope():
-    net.add(gluon.nn.Dense(128, activation="relu"))
-    net.add(gluon.nn.Dense(64, activation="relu"))
-    net.add(gluon.nn.Dense(32))
-
-
-# In[7]:
-
-
-net.collect_params().initialize(mx.init.Normal(sigma=.1), ctx=mdl_ctx)
-
-
-# In[8]:
-
-
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 
 
-# In[9]:
-
-
-trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': .01})
-
-
-# In[10]:
+# In[7]:
 
 
 def evaluate_accuracy(data_iterator, net):
@@ -108,7 +88,7 @@ def evaluate_accuracy(data_iterator, net):
     return acc.get()[1]
 
 
-# In[11]:
+# In[8]:
 
 
 epochs = 10
