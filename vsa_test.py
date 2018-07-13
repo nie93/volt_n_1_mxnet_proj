@@ -7,6 +7,7 @@
 # https://gluon.mxnet.io/chapter03_deep-neural-networks/mlp-gluon.html#Faster-modeling-with-gluon.nn.Sequential
 from __future__ import print_function
 import csv
+from time import time
 import numpy as np
 import mxnet as mx
 from mxnet import nd, autograd, gluon
@@ -51,6 +52,8 @@ test_data = gluon.data.DataLoader(gluon.data.ArrayDataset(Xtest, ytest),
 
 mdl_ctx = mx.cpu()
 dat_ctx = mx.cpu()
+mdl_ctx = mx.gpu()
+dat_ctx = mx.gpu()
 
 
 # In[5]:
@@ -91,10 +94,11 @@ def evaluate_accuracy(data_iterator, net):
 # In[8]:
 
 
-epochs = 10
+epochs = 100
 smoothing_constant = .01
 
 for e in range(epochs):
+    tic = time()
     cumulative_loss = 0
     for i, (data, label) in enumerate(train_data):
         data = data.as_in_context(mdl_ctx).reshape((-1, 337))
@@ -109,6 +113,7 @@ for e in range(epochs):
 
     train_accuracy = evaluate_accuracy(train_data, net)
     test_accuracy = evaluate_accuracy(test_data, net)
-    print("Epoch %2d. Train_acc: %12.8f, Test_acc: %12.8f, Loss: %s" %
-          (e, train_accuracy, test_accuracy, cumulative_loss/num_of_samples))
+    print("Epoch %2d. Train_acc: %12.8f, Test_acc: %12.8f, Time: %6.5fs, Loss: %5.4f" %
+          (e, train_accuracy, test_accuracy, time()-tic, \
+           cumulative_loss/num_of_samples))
 
